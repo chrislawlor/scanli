@@ -1,0 +1,3 @@
+Django>=4.1,<4.2
+requests>=2.25,<3
+this-is-not-a-pypi-package-293049u820394802938402938402983409283409uoiksjdpfoij
