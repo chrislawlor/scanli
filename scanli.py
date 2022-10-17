@@ -13,7 +13,7 @@ import requirements
 from rich.console import Console
 from rich.progress import track
 from rich.table import Table
-from cache_to_disk import cache_to_disk
+from cache_to_disk import cache_to_disk, delete_disk_caches_for_function
 
 PYPI_URL = "https://pypi.org/pypi/%s/json"
 
@@ -96,7 +96,7 @@ def pip_fetch_metadata(package_name: str) -> PipMetadata:
     data = resp.json()
 
     info = data.get("info", {})
-    url_data = info.get("project_urls", {})
+    url_data = info.get("project_urls", {}) or {}
     urls = ProjectUrls(
         documentation=url_data.get("Documentation", ""),
         funding=url_data.get("Funding", ""),
@@ -112,7 +112,7 @@ def pip_fetch_metadata(package_name: str) -> PipMetadata:
         classifiers=info.get("classifiers", []),
         license=info.get("license", "") or "",
         urls=urls,
-        requires_dist=info.get("requires_dist"),
+        requires_dist=info.get("requires_dist", []),
     )
 
 
@@ -173,7 +173,14 @@ def scan_cli(pip: str):
     display_stats(metadatas)
 
 
-if __name__ == "__main__":
+def cache_cli(clear: bool):
+    delete_disk_caches_for_function("pip_fetch_metadata")
+    console = Console()
+    console.print("Cleared request cache")
+
+
+def main():
+    delete_disk_caches_for_function("pip_fetch_metadata")
     parser = argparse.ArgumentParser(
         description="scanli: CLI tool for license tracking."
     )
@@ -184,7 +191,18 @@ if __name__ == "__main__":
     parser_scan.add_argument("-p", "--pip")
     parser_scan.set_defaults(func=scan_cli)
 
+    # cache parser
+    parser_cache = subparsers.add_parser("cache")
+    parser_cache.add_argument(
+        "-c", "--clear", help="Clear request cache", action="store_true"
+    )
+    parser_cache.set_defaults(func=cache_cli)
+
     args = parser.parse_args()
     argsd = args.__dict__
     func = argsd.pop("func")
     func(**argsd)
+
+
+if __name__ == "__main__":
+    main()
